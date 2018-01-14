@@ -63,8 +63,6 @@ it('should deployed contract', async ()  => {
             assert.equal(true, mintingFinished );
             var state = await contract.state.call();
             assert.equal(1,state);
-            var goalReached = await contract.goalReached.call();
-            assert.equal(false, goalReached);
 
             var isFinalized = await contract.isFinalized.call();
             assert.equal(true, isFinalized);

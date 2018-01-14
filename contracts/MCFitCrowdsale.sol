@@ -362,7 +362,6 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
 
     mapping(address => uint256) public deposited;
     // minimum amount of funds to be raised in weis
-    uint256 public goal;
     //MintableToken public token;
 
     event Closed();
@@ -371,11 +370,9 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
     event TokenPurchase(address indexed beneficiary, uint256 value, uint256 amount);
 
 
-    function MCFitCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, uint256 _goal, address _wallet) public
+    function MCFitCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet) public
     Crowdsale(_startTime, _endTime, _rate, _wallet)
     {
-        require(_goal > 0);
-        goal = _goal;
         owner = msg.sender;
         transfersEnabled = true;
         mintingFinished = false;
@@ -428,7 +425,6 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
     function refund(address _investor) public {
         require(state == State.Refunding);
         require(isFinalized);
-        require(!goalReached());
 
         uint256 depositedValue = deposited[_investor];
         withDraw(_investor);
@@ -436,18 +432,6 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
         _investor.transfer(depositedValue);
         Refunded(_investor, depositedValue);
         weiRaised = weiRaised.sub(depositedValue);
-    }
-
-    function goalReached() public constant returns (bool) {
-        return weiRaised >= goal;
-    }
-
-    function vaultFinalization() public onlyOwner {
-        if (goalReached()) {
-            close();
-        } else {
-            enableRefunds();
-        }
     }
 
     function getDeposited(address _investor) public view returns (uint256){
