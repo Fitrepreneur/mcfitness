@@ -231,15 +231,14 @@ contract Ownable {
  */
 
 contract MintableToken is StandardToken, Ownable {
-    string public constant name = "PvaToken";
-    string public constant symbol = "PVA";
+    string public constant name = "MCFit Token";
+    string public constant symbol = "MCF";
     uint8 public constant decimals = 18;
 
     event Mint(address indexed to, uint256 amount);
     event MintFinished();
 
     bool public mintingFinished;
-
 
     modifier canMint() {
         require(!mintingFinished);
@@ -306,6 +305,7 @@ contract Crowdsale is Ownable {
 
     // amount of raised money in wei
     uint256 public weiRaised;
+    uint256 public tokenRaised;
     bool public isFinalized = false;
 
     event Finalized();
@@ -363,6 +363,9 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
     mapping(address => uint256) public deposited;
     // minimum amount of funds to be raised in weis
     //MintableToken public token;
+    uint256 limit40Percent = 30*10**6*10**18;
+    uint256 limit20Percent = 60*10**6*10**18;
+    uint256 limit10Percent = 100*10**6*10**18;
 
     event Closed();
     event RefundsEnabled();
@@ -388,13 +391,26 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
     function buyTokens(address investor) public payable {
         uint256 weiAmount = msg.value;
         // calculate token amount to be created
-        uint256 tokens = weiAmount.mul(rate);
+        uint256 tokens = getTotalAmountOfTokens(weiAmount);
         require(investor != address(0));
         // update state
         weiRaised = weiRaised.add(weiAmount);
         mint(investor, tokens);
         TokenPurchase(investor, weiAmount, tokens);
         deposit(investor);
+    }
+
+    function getTotalAmountOfTokens(uint256 _weiAmount) public constant returns (uint256 amountOfTokens) {
+        uint256 currentTokenRate = 0;
+        if (totalSupply < limit40Percent) {
+            return currentTokenRate = _weiAmount.mul(rate*140);
+        } else if (totalSupply < limit20Percent) {
+            return currentTokenRate = _weiAmount.mul(rate*120);
+        } else if (totalSupply < limit10Percent) {
+            return currentTokenRate = _weiAmount.mul(rate*110);
+        } else {
+            return currentTokenRate = _weiAmount.mul(rate*100);
+        }
     }
 
     function deposit(address investor) internal {
@@ -411,6 +427,12 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
         Closed();
         finalize();
         wallet.transfer(this.balance);
+    }
+
+    function changeRateUSD(uint256 _rate) onlyOwner public {
+        require(state == State.Active);
+        require(_rate > 0);
+        rate = _rate;
     }
 
     function enableRefunds() onlyOwner public {

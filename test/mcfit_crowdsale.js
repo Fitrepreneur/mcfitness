@@ -4,7 +4,7 @@ contract('MCFitCrowdsale', (accounts) => {
     var contract;
     var account_one = accounts[0];
     var account_two = accounts[1];
-    var rate = 20;
+    var rate = 1410*140;
     var buyWei = 80000;
     //@ param testedRefund use test Refund or Close
     var testedRefund = true;
@@ -24,12 +24,12 @@ it('should deployed contract', async ()  => {
         var totalSupplyBefore = await contract.totalSupply.call();
         var balanceAccountTwoBefore = await contract.balanceOf(accounts[2]);
         var weiRaisedBefore = await contract.weiRaised.call();
-        //console.log("totalSupply = " + totalSupplyBefore);
+        console.log("totalSupply = " + totalSupplyBefore);
 
         await contract.buyTokens(accounts[2],{from:accounts[2], value:buyWei});
 
         var totalSupplyAfter = await contract.totalSupply.call();
-        //console.log("totalSupply = " + totalSupplyAfter);
+        console.log("totalSupplyAfter = " + totalSupplyAfter);
         assert.isTrue(totalSupplyBefore < totalSupplyAfter);
         assert.equal(0, totalSupplyBefore);
         assert.equal(rate*buyWei, totalSupplyAfter);
@@ -40,13 +40,13 @@ it('should deployed contract', async ()  => {
         assert.equal(rate*buyWei, balanceAccountTwoAfter);
 
         var weiRaisedAfter = await contract.weiRaised.call();
-        //console.log("weiRaisedAfter = " + weiRaisedAfter);
+        console.log("weiRaisedAfter = " + weiRaisedAfter);
         assert.isTrue(weiRaisedBefore < weiRaisedAfter);
         assert.equal(0, weiRaisedBefore);
         assert.equal(buyWei, weiRaisedAfter);
 
         var depositedAfter = await contract.getDeposited.call(accounts[2]);
-        //console.log("DepositedAfter = " + depositedAfter);
+        console.log("DepositedAfter = " + depositedAfter);
         assert.equal(buyWei, depositedAfter);
 
     });
@@ -88,8 +88,6 @@ it('should deployed contract', async ()  => {
             assert.equal(true, mintingFinished );
             var state = await contract.state.call();
             assert.equal(2,state);
-            var goalReached = await contract.goalReached.call();
-            assert.equal(false, goalReached);
 
             var isFinalized = await contract.isFinalized.call();
             assert.equal(true, isFinalized);
