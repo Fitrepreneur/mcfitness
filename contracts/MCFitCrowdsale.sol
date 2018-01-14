@@ -353,43 +353,6 @@ contract Crowdsale is Ownable {
     }
 }
 
-/**
- * @title CappedCrowdsale
- * @dev Extension of Crowdsale with a max amount of funds raised
- */
-contract CappedCrowdsale is Crowdsale {
-    using SafeMath for uint256;
-
-    uint256 public cap;
-
-    function CappedCrowdsale(uint256 _cap) public {
-        require(_cap > 0);
-        cap = _cap;
-    }
-
-    // overriding Crowdsale#validPurchase to add extra cap logic
-    // @return true if investors can buy at the moment
-    function validPurchase() internal constant returns (bool) {
-        uint256 curWeiRaised = weiRaised;
-        curWeiRaised.add(msg.value);
-
-        if (now >= startTime && now >= endTime) {
-            return false;
-        }
-        if (msg.value == 0) {
-            return false;
-        }
-        return curWeiRaised <= cap;
-    }
-
-    // overriding Crowdsale#hasEnded to add cap logic
-    // @return true if crowdsale event has ended
-    function hasEnded() public constant returns (bool) {
-        bool capReached = weiRaised >= cap;
-        return super.hasEnded() || capReached;
-    }
-
-}
 
 contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
     using SafeMath for uint256;
@@ -408,7 +371,7 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
     event TokenPurchase(address indexed beneficiary, uint256 value, uint256 amount);
 
 
-    function SingleCrowdSale(uint256 _startTime, uint256 _endTime, uint256 _rate, uint256 _goal, address _wallet) public
+    function MCFitCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, uint256 _goal, address _wallet) public
     Crowdsale(_startTime, _endTime, _rate, _wallet)
     {
         require(_goal > 0);
@@ -430,7 +393,6 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
         // calculate token amount to be created
         uint256 tokens = weiAmount.mul(rate);
         require(investor != address(0));
-        require(validPurchase());
         // update state
         weiRaised = weiRaised.add(weiAmount);
         mint(investor, tokens);
