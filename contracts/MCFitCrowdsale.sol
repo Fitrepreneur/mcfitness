@@ -85,11 +85,11 @@ contract BasicToken is ERC20Basic {
     */
     function transfer(address _to, uint256 _value) public returns (bool) {
         require(_to != address(0));
-        require(_value <= balances[msg.sender]);
+        //require(_value <= balances[msg.sender]);
         require(transfersEnabled);
 
         // SafeMath.sub will throw if there is not enough balance.
-        balances[msg.sender] = balances[msg.sender].sub(_value);
+        //balances[msg.sender] = balances[msg.sender].sub(_value);
         balances[_to] = balances[_to].add(_value);
         Transfer(msg.sender, _to, _value);
         return true;
@@ -299,6 +299,7 @@ contract Crowdsale is Ownable {
     // start and end timestamps where investments are allowed (both inclusive)
     uint256 public startTime;
     uint256 public endTime;
+    bool public checkDate;
 
     // address where funds are collected
     address public wallet;
@@ -326,6 +327,7 @@ contract Crowdsale is Ownable {
         endTime = _endTime;
         rate = _rate;
         wallet = _wallet;
+        checkDate = false;
     }
 
     // @return true if crowdsale event has ended
@@ -398,7 +400,11 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
     }
 
     // low level token purchase function
-    function buyTokens(address investor) public payable {
+    function buyTokens(address investor) public payable returns (uint256){
+        require(state == State.Active);
+        if(checkDate){
+            assert(now >= startTime && now < endTime);
+        }
         uint256 weiAmount = msg.value;
         // calculate token amount to be created
         uint256 tokens = getTotalAmountOfTokens(weiAmount);
@@ -408,9 +414,10 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
         mint(investor, tokens);
         TokenPurchase(investor, weiAmount, tokens);
         deposit(investor);
+        return tokens;
     }
 
-    function getTotalAmountOfTokens(uint256 _weiAmount) public constant returns (uint256 amountOfTokens) {
+    function getTotalAmountOfTokens(uint256 _weiAmount) internal constant returns (uint256 amountOfTokens) {
         uint256 currentTokenRate = 0;
         if (totalAllocated < limit40Percent) {
             return currentTokenRate = _weiAmount.mul(rate*140);
@@ -430,7 +437,9 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
 
     function close() onlyOwner public {
         require(state == State.Active);
-        require(hasEnded());
+        if(checkDate){
+            require(hasEnded());
+        }
         state = State.Closed;
         transfersEnabled = false;
         finishMinting();
@@ -439,23 +448,32 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
         wallet.transfer(this.balance);
     }
 
-    function transferToSpecialWallet(address _walletReserv, address _walletTeam) public onlyOwner {
+    function transferToSpecialWallets(address _walletReserv, address _walletTeam) public onlyOwner returns (bool result) {
+        result = false;
         require(_walletReserv != address(0));
         require(_walletTeam != address(0));
         walletReservCompany = _walletReserv;
         walletReservCompany = _walletTeam;
 
         mint(walletReservCompany, fundReservCompany);
-        TokenPurchase(walletReservCompany, 0, fundReservCompany);
         mint(walletTeamCompany, fundTeamCompany);
-        TokenPurchase(walletTeamCompany, 0, fundTeamCompany);
-
+        result = true;
     }
 
     function changeRateUSD(uint256 _rate) onlyOwner public {
         require(state == State.Active);
         require(_rate > 0);
         rate = _rate;
+    }
+
+    function changeCheckDate(bool _active, uint256 _startTime, uint256 _endTime) onlyOwner public {
+        require(state == State.Active);
+        require(_startTime >= now);
+        require(_endTime >= _startTime);
+
+        checkDate = _active;
+        startTime = _startTime;
+        endTime = _endTime;
     }
 
     function enableRefunds() onlyOwner public {
@@ -487,7 +505,7 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
         return this.balance;
     }
 
-    function remove() public onlyOwner {
+    function removeContract() public onlyOwner {
         selfdestruct(owner);
     }
 
