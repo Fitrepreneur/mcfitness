@@ -235,6 +235,8 @@ contract MintableToken is StandardToken, Ownable {
     string public constant symbol = "MCF";
     uint8 public constant decimals = 18;
 
+    uint256 public totalAllocated = 0;
+
     event Mint(address indexed to, uint256 amount);
     event MintFinished();
 
@@ -253,7 +255,8 @@ contract MintableToken is StandardToken, Ownable {
      */
     function mint(address _to, uint256 _amount) canMint internal returns (bool) {
 
-        totalSupply = totalSupply.add(_amount);
+        require(!mintingFinished);
+        totalAllocated = totalAllocated.add(_amount);
         balances[_to] = balances[_to].add(_amount);
         Mint(_to, _amount);
         Transfer(address(0), _to, _amount);
@@ -264,8 +267,8 @@ contract MintableToken is StandardToken, Ownable {
 
         require(mintingFinished);
         uint256 amount = balanceOf(_investor);
-        require(amount <= totalSupply);
-        totalSupply = totalSupply.sub(amount);
+        require(amount <= totalAllocated);
+        totalAllocated = totalAllocated.sub(amount);
         balances[_investor] = balances[_investor].sub(amount);
         return true;
     }
@@ -363,6 +366,12 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
     mapping(address => uint256) public deposited;
     // minimum amount of funds to be raised in weis
     //MintableToken public token;
+    uint256 public constant INITIAL_SUPPLY = 1 * (10**9) * (10 ** uint256(decimals));
+    uint256 public fundReservCompany = 350 * (10**6) * (10 ** uint256(decimals));
+    uint256 public fundTeamCompany = 300 * (10**6) * (10 ** uint256(decimals));
+    address public walletReservCompany = address(0);
+    address public walletTeamCompany = address(0);
+
     uint256 limit40Percent = 30*10**6*10**18;
     uint256 limit20Percent = 60*10**6*10**18;
     uint256 limit10Percent = 100*10**6*10**18;
@@ -380,6 +389,7 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
         transfersEnabled = true;
         mintingFinished = false;
         state = State.Active;
+        totalSupply = INITIAL_SUPPLY;
     }
 
     // fallback function can be used to buy tokens
@@ -402,11 +412,11 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
 
     function getTotalAmountOfTokens(uint256 _weiAmount) public constant returns (uint256 amountOfTokens) {
         uint256 currentTokenRate = 0;
-        if (totalSupply < limit40Percent) {
+        if (totalAllocated < limit40Percent) {
             return currentTokenRate = _weiAmount.mul(rate*140);
-        } else if (totalSupply < limit20Percent) {
+        } else if (totalAllocated < limit20Percent) {
             return currentTokenRate = _weiAmount.mul(rate*120);
-        } else if (totalSupply < limit10Percent) {
+        } else if (totalAllocated < limit10Percent) {
             return currentTokenRate = _weiAmount.mul(rate*110);
         } else {
             return currentTokenRate = _weiAmount.mul(rate*100);
@@ -427,6 +437,19 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
         Closed();
         finalize();
         wallet.transfer(this.balance);
+    }
+
+    function transferToSpecialWallet(address _walletReserv, address _walletTeam) public onlyOwner {
+        require(_walletReserv != address(0));
+        require(_walletTeam != address(0));
+        walletReservCompany = _walletReserv;
+        walletReservCompany = _walletTeam;
+
+        mint(walletReservCompany, fundReservCompany);
+        TokenPurchase(walletReservCompany, 0, fundReservCompany);
+        mint(walletTeamCompany, fundTeamCompany);
+        TokenPurchase(walletTeamCompany, 0, fundTeamCompany);
+
     }
 
     function changeRateUSD(uint256 _rate) onlyOwner public {

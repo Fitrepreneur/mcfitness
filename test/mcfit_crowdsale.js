@@ -21,18 +21,18 @@ it('should deployed contract', async ()  => {
     });
 
     it('verification of receiving Ether', async ()  => {
-        var totalSupplyBefore = await contract.totalSupply.call();
+        var totalAllocatedBefore = await contract.totalAllocated.call();
         var balanceAccountTwoBefore = await contract.balanceOf(accounts[2]);
         var weiRaisedBefore = await contract.weiRaised.call();
-        console.log("totalSupply = " + totalSupplyBefore);
+        console.log("totalAllocated = " + totalAllocatedBefore);
 
         await contract.buyTokens(accounts[2],{from:accounts[2], value:buyWei});
 
-        var totalSupplyAfter = await contract.totalSupply.call();
-        console.log("totalSupplyAfter = " + totalSupplyAfter);
-        assert.isTrue(totalSupplyBefore < totalSupplyAfter);
-        assert.equal(0, totalSupplyBefore);
-        assert.equal(rate*buyWei, totalSupplyAfter);
+        var totalAllocatedAfter = await contract.totalAllocated.call();
+        console.log("totalAllocatedAfter = " + totalAllocatedAfter);
+        assert.isTrue(totalAllocatedBefore < totalAllocatedAfter);
+        assert.equal(0, totalAllocatedBefore);
+        assert.equal(rate*buyWei, totalAllocatedAfter);
 
         var balanceAccountTwoAfter = await contract.balanceOf(accounts[2]);
         assert.isTrue(balanceAccountTwoBefore < balanceAccountTwoAfter);
