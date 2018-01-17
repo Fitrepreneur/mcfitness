@@ -188,17 +188,16 @@ contract StandardToken is ERC20, BasicToken {
  */
 contract Ownable {
     address public owner;
-
+    address public advisor;
 
     event OwnerChanged(address indexed previousOwner, address indexed newOwner);
-
 
     /**
      * @dev The Ownable constructor sets the original `owner` of the contract to the sender
      * account.
      */
     function Ownable() public {
-        owner = msg.sender;
+        advisor = msg.sender;
     }
 
 
@@ -206,7 +205,7 @@ contract Ownable {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(msg.sender == owner);
+        require(msg.sender == owner || msg.sender == advisor);
         _;
     }
 
@@ -384,10 +383,12 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
     event TokenPurchase(address indexed beneficiary, uint256 value, uint256 amount);
 
 
-    function MCFitCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet) public
+    function MCFitCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate,
+        address _wallet, address _owner) public
     Crowdsale(_startTime, _endTime, _rate, _wallet)
     {
-        owner = msg.sender;
+        owner = _owner;
+        //advisor = msg.sender;
         transfersEnabled = true;
         mintingFinished = false;
         state = State.Active;
@@ -420,10 +421,13 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
     function getTotalAmountOfTokens(uint256 _weiAmount) internal constant returns (uint256 amountOfTokens) {
         uint256 currentTokenRate = 0;
         if (totalAllocated < limit40Percent) {
+            if(_weiAmount < 5 * 10**17){revert();}
             return currentTokenRate = _weiAmount.mul(rate*140);
         } else if (totalAllocated < limit20Percent) {
+            if(_weiAmount < 5 * 10**17){revert();}
             return currentTokenRate = _weiAmount.mul(rate*120);
         } else if (totalAllocated < limit10Percent) {
+            if(_weiAmount < 5 * 10**17){revert();}
             return currentTokenRate = _weiAmount.mul(rate*110);
         } else {
             return currentTokenRate = _weiAmount.mul(rate*100);

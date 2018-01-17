@@ -5,7 +5,7 @@ contract('MCFitCrowdsale', (accounts) => {
     var account_one = accounts[0];
     var account_two = accounts[1];
     var rate = 1410*140;
-    var buyWei = 80000;
+    var buyWei = 5 * 10**17;
     //@ param testedRefund use test Refund or Close
     var testedRefund = true;
 
@@ -55,6 +55,7 @@ it('should deployed contract', async ()  => {
         if (testedRefund) {
             console.log("Tested Refund smart contract");
             var weiRaisedBefore = await contract.weiRaised.call();
+
             assert.equal(buyWei, weiRaisedBefore);
 
             await contract.enableRefunds({from:accounts[0]});
@@ -76,6 +77,7 @@ it('should deployed contract', async ()  => {
 
             var balanceAccountTwoAfter = await contract.balanceOf(accounts[2]);
             assert.equal(0, balanceAccountTwoAfter);
+
         } else {
 
             console.log("Tested Close smart contract");
