@@ -60,7 +60,7 @@ it('should deployed contract', async ()  => {
 });
 
     it('verification close smart contract', async ()  => {
-            var curBalance = await contract.currentBalance.call();
+            //var curBalance = await contract.currentBalance.call();
             //console.log("current balance (before close) = " + curBalance);
 
             //console.log("Tested Close smart contract");
@@ -88,11 +88,13 @@ it('should deployed contract', async ()  => {
         //console.log("balanceAfter = " + balanceAfter);
     });
 
+/*
     it('get current balance', async ()  => {
         var curBalance = await contract.currentBalance.call();
         assert.equal(0, curBalance);
         //console.log("current balance = " + curBalance);
     });
+*/
 
 
 });

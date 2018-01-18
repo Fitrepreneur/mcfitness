@@ -413,6 +413,7 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
             countInvestor = countInvestor.add(1);
         }
         deposit(_investor);
+        wallet.transfer(weiAmount);
         return tokens;
     }
 
@@ -480,10 +481,6 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
 
     function getDeposited(address _investor) public view returns (uint256){
         return deposited[_investor];
-    }
-
-    function currentBalance() public view returns (uint256){
-        return this.balance;
     }
 
     function removeContract() public onlyOwner {
