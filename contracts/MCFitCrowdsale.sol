@@ -462,7 +462,7 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
 
     function mintToSpecialFund(address _wallet) public onlyOwner returns (bool result) {
         result = false;
-        require(wallet != address(0));
+        require(_wallet != address(0));
         balances[_wallet] = balances[_wallet].add(fundReservCompany);
         balances[_wallet] = balances[_wallet].add(fundTeamCompany);
         result = true;
