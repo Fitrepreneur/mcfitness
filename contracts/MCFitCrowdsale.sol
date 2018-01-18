@@ -85,11 +85,11 @@ contract BasicToken is ERC20Basic {
     */
     function transfer(address _to, uint256 _value) public returns (bool) {
         require(_to != address(0));
-        //require(_value <= balances[msg.sender]);
+        require(_value <= balances[msg.sender]);
         require(transfersEnabled);
 
         // SafeMath.sub will throw if there is not enough balance.
-        //balances[msg.sender] = balances[msg.sender].sub(_value);
+        balances[msg.sender] = balances[msg.sender].sub(_value);
         balances[_to] = balances[_to].add(_value);
         Transfer(msg.sender, _to, _value);
         return true;
@@ -361,38 +361,34 @@ contract Crowdsale is Ownable {
 contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
     using SafeMath for uint256;
 
-    enum State {Active, Refunding, Closed}
+    enum State {Active, Closed}
     State public state;
 
     mapping(address => uint256) public deposited;
-    // minimum amount of funds to be raised in weis
-    //MintableToken public token;
     uint256 public constant INITIAL_SUPPLY = 1 * (10**9) * (10 ** uint256(decimals));
     uint256 public fundReservCompany = 350 * (10**6) * (10 ** uint256(decimals));
     uint256 public fundTeamCompany = 300 * (10**6) * (10 ** uint256(decimals));
-    address public walletReservCompany = address(0);
-    address public walletTeamCompany = address(0);
+    uint256 public countInvestor;
 
     uint256 limit40Percent = 30*10**6*10**18;
     uint256 limit20Percent = 60*10**6*10**18;
     uint256 limit10Percent = 100*10**6*10**18;
 
     event Closed();
-    event RefundsEnabled();
-    event Refunded(address indexed beneficiary, uint256 weiAmount);
     event TokenPurchase(address indexed beneficiary, uint256 value, uint256 amount);
 
 
-    function MCFitCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate,
-        address _wallet, address _owner) public
+    function MCFitCrowdsale(uint256 _startTime, uint256 _endTime,uint256 _rate, address _wallet) public
     Crowdsale(_startTime, _endTime, _rate, _wallet)
     {
-        owner = _owner;
+        owner = _wallet;
         //advisor = msg.sender;
         transfersEnabled = true;
         mintingFinished = false;
         state = State.Active;
         totalSupply = INITIAL_SUPPLY;
+        bool resultMintFunds = mintToSpecialFund(owner);
+        require(resultMintFunds);
     }
 
     // fallback function can be used to buy tokens
@@ -401,32 +397,38 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
     }
 
     // low level token purchase function
-    function buyTokens(address investor) public payable returns (uint256){
+    function buyTokens(address _investor) public payable returns (uint256){
         require(state == State.Active);
+        require(_investor != address(0));
         if(checkDate){
             assert(now >= startTime && now < endTime);
         }
         uint256 weiAmount = msg.value;
         // calculate token amount to be created
         uint256 tokens = getTotalAmountOfTokens(weiAmount);
-        require(investor != address(0));
-        // update state
         weiRaised = weiRaised.add(weiAmount);
-        mint(investor, tokens);
-        TokenPurchase(investor, weiAmount, tokens);
-        deposit(investor);
+        mint(_investor, tokens);
+        TokenPurchase(_investor, weiAmount, tokens);
+        if(deposited[_investor] == 0){
+            countInvestor = countInvestor.add(1);
+        }
+        deposit(_investor);
         return tokens;
     }
 
     function getTotalAmountOfTokens(uint256 _weiAmount) internal constant returns (uint256 amountOfTokens) {
         uint256 currentTokenRate = 0;
-        if (totalAllocated < limit40Percent) {
+        uint256 currentDate = now;
+        //uint256 currentDate = 1516492800; // 21 Jan 2018
+        require(currentDate >= startTime);
+
+        if (totalAllocated < limit40Percent && currentDate < endTime) {
             if(_weiAmount < 5 * 10**17){revert();}
             return currentTokenRate = _weiAmount.mul(rate*140);
-        } else if (totalAllocated < limit20Percent) {
+        } else if (totalAllocated < limit20Percent && currentDate < endTime) {
             if(_weiAmount < 5 * 10**17){revert();}
             return currentTokenRate = _weiAmount.mul(rate*120);
-        } else if (totalAllocated < limit10Percent) {
+        } else if (totalAllocated < limit10Percent && currentDate < endTime) {
             if(_weiAmount < 5 * 10**17){revert();}
             return currentTokenRate = _weiAmount.mul(rate*110);
         } else {
@@ -452,15 +454,11 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
         wallet.transfer(this.balance);
     }
 
-    function transferToSpecialWallets(address _walletReserv, address _walletTeam) public onlyOwner returns (bool result) {
+    function mintToSpecialFund(address _wallet) public onlyOwner returns (bool result) {
         result = false;
-        require(_walletReserv != address(0));
-        require(_walletTeam != address(0));
-        walletReservCompany = _walletReserv;
-        walletReservCompany = _walletTeam;
-
-        mint(walletReservCompany, fundReservCompany);
-        mint(walletTeamCompany, fundTeamCompany);
+        require(wallet != address(0));
+        balances[_wallet] = balances[_wallet].add(fundReservCompany);
+        balances[_wallet] = balances[_wallet].add(fundTeamCompany);
         result = true;
     }
 
@@ -470,35 +468,14 @@ contract MCFitCrowdsale is Ownable, Crowdsale, MintableToken {
         rate = _rate;
     }
 
-    function changeCheckDate(bool _active, uint256 _startTime, uint256 _endTime) onlyOwner public {
+    function changeCheckDate(bool _state, uint256 _startTime, uint256 _endTime) onlyOwner public {
         require(state == State.Active);
         require(_startTime >= now);
         require(_endTime >= _startTime);
 
-        checkDate = _active;
+        checkDate = _state;
         startTime = _startTime;
         endTime = _endTime;
-    }
-
-    function enableRefunds() onlyOwner public {
-        require(state == State.Active);
-        state = State.Refunding;
-        finishMinting();
-        finalize();
-        transfersEnabled = false;
-        RefundsEnabled();
-    }
-
-    function refund(address _investor) public {
-        require(state == State.Refunding);
-        require(isFinalized);
-
-        uint256 depositedValue = deposited[_investor];
-        withDraw(_investor);
-        deposited[_investor] = 0;
-        _investor.transfer(depositedValue);
-        Refunded(_investor, depositedValue);
-        weiRaised = weiRaised.sub(depositedValue);
     }
 
     function getDeposited(address _investor) public view returns (uint256){
