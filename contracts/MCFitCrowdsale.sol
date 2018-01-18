@@ -220,6 +220,11 @@ contract Ownable {
         owner = newOwner;
     }
 
+    function changeAdvisor(address newAdvisor) onlyOwner public {
+        advisor = newAdvisor;
+        OwnerChanged(advisor, newAdvisor);
+    }
+
 }
 
 /**
